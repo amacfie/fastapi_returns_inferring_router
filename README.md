@@ -43,7 +43,7 @@ class ForbiddenBecauseOfKey(BaseModel):
 
 app = fastapi.FastAPI()
 
-# one param is added to, APIRouter, called get_status_code.
+# one param is added to APIRouter, called get_status_code.
 # pass a function that can take either a return type or return value and returns
 # the HTTP status code you wish to use it for
 r = ReturnsInferringRouter(get_status_code=lambda x: x.status_code())
