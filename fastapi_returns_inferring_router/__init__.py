@@ -13,10 +13,12 @@ class ReturnsInferringRouter(APIRouter):
         self,
         *args,
         get_status_code: Callable[[Any], int] | None=None,
+        merge_with_existing_responses: bool=True,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._get_status_code = get_status_code
+        self._merge_with_existing_responses = merge_with_existing_responses
 
     if not TYPE_CHECKING:  # pragma: no branch
 
@@ -48,12 +50,21 @@ class ReturnsInferringRouter(APIRouter):
                 if kwargs.get("response_model") is None:
                     kwargs["response_model"] = suc_type
 
-                if kwargs.get("responses") is None:
+                if (
+                    kwargs.get("responses") is None or
+                    self._merge_with_existing_responses
+                ):
                     if get_origin(fail_type) in {Union, UnionType}:
                         fail_models = get_args(fail_type)
                     else:
                         fail_models = (fail_type,)
-                    responses = dict()
+                    responses = kwargs.get("responses") or dict()
+                    # codes can be e.g. "default" or "4xx" so we'll normalize
+                    # the ones we can/{have to}
+                    for k, v in list(responses.items()):
+                        if isinstance(k, str) and k.isdecimal(k):
+                            del responses[k]
+                            responses[int(k)] = v
                     assert self._get_status_code is not None
                     for fail_model in fail_models:
                         code = self._get_status_code(fail_model)
@@ -61,10 +72,17 @@ class ReturnsInferringRouter(APIRouter):
                         if fail_model is None:
                             fail_model = Any
                         if code in responses:
-                            responses[code]["model"] = Union[
-                                responses[code]["model"],
-                                fail_model,
-                            ]
+                            try:
+                                responses[code]["model"] = Union[
+                                    responses[code]["model"],
+                                    fail_model,
+                                ]
+                            except KeyError:
+                                raise ValueError(
+                                    "fastapi_returns_inferring_router: "
+                                    "Can't merge with response missing a "
+                                    f"\"model\" key (for status code {code})"
+                                )
                         else:
                             responses[code] = {"model": fail_model}
                     kwargs["responses"] = responses
