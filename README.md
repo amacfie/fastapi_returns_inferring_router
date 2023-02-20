@@ -3,13 +3,13 @@ and Result from [returns](https://returns.readthedocs.io/en/latest/pages/result.
 so that both primary (200) and [additional](https://fastapi.tiangolo.com/advanced/additional-responses/)
 response types can be inferred from the path operation type signature.
 
-Install as user
+Install as user:
 ```bash
 pip install git+https://github.com/amacfie/fastapi_returns_inferring_router
 ```
 
 
-Install as developer
+Install as developer:
 ```bash
 pip install --editable .
 ```

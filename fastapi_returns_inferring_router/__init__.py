@@ -3,9 +3,12 @@ from types import UnionType
 from typing import (TYPE_CHECKING, Any, Callable, Union, get_args, get_origin, get_type_hints)
 
 from fastapi import APIRouter
+from fastapi.datastructures import DefaultPlaceholder
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from returns.result import Result, Success, Failure
+from semantic_version import Version
+import fastapi
 
 
 class ReturnsInferringRouter(APIRouter):
@@ -47,8 +50,7 @@ class ReturnsInferringRouter(APIRouter):
                 # pydantic maps None to something openapi doesn't recognize
                 if suc_type is None:
                     suc_type = Any
-                if kwargs.get("response_model") is None:
-                    kwargs["response_model"] = suc_type
+                kwargs["response_model"] = suc_type
 
                 if (
                     kwargs.get("responses") is None or
@@ -87,7 +89,7 @@ class ReturnsInferringRouter(APIRouter):
                             responses[code] = {"model": fail_model}
                     kwargs["responses"] = responses
 
-            else:
+            elif Version(fastapi.__version__) < Version("0.89.0"):
                 # same pydantic issue as above
                 if return_type is None:
                     return_type = Any
